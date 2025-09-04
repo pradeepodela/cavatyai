@@ -8,6 +8,10 @@ from datetime import datetime
 import pandas as pd
 import asyncio
 import os
+import tempfile
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Page configuration
 st.set_page_config(
@@ -61,6 +65,13 @@ st.markdown("""
     .stage-2 { background-color: #fbb6ce; color: #702459; }
     .stage-3 { background-color: #fc8181; color: #742a2a; }
     .stage-4 { background-color: #e53e3e; color: white; }
+    .audio-section {
+        background-color: #f8f9ff;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #4c51bf;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -285,16 +296,16 @@ def generate_audio_summary(analysis):
         summary += f" Emergency level: {emergency}. Immediate dental attention is recommended."
 
     visible_issues = analysis.get("visible_issues", [])
-    if visible_issues:
-        summary += f" Visible issues include: {', '.join(visible_issues)}."
+    if visible_issues and len(visible_issues) > 0:
+        summary += f" Visible issues include: {', '.join(visible_issues[:3])}."  # Limit to first 3 for brevity
 
     treatments = analysis.get("recommended_treatments", [])
-    if treatments:
-        summary += f" Recommended treatments: {', '.join(treatments)}."
+    if treatments and len(treatments) > 0:
+        summary += f" Recommended treatments: {', '.join(treatments[:2])}."  # Limit to first 2
 
     home_care = analysis.get("home_care_instructions", [])
-    if home_care:
-        summary += f" Home care instructions: {', '.join(home_care)}."
+    if home_care and len(home_care) > 0:
+        summary += f" Home care instructions: {', '.join(home_care[:2])}."  # Limit to first 2
 
     dentist_timeline = analysis.get("when_to_see_dentist", "As soon as possible")
     summary += f" When to see dentist: {dentist_timeline}."
@@ -305,7 +316,6 @@ async def generate_edge_tts_audio(text, voice="en-US-AriaNeural", rate="+0%", pi
     """Generate audio file using Edge TTS"""
     try:
         import edge_tts
-        import tempfile
 
         # Create a temporary file for the audio
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
@@ -322,6 +332,100 @@ async def generate_edge_tts_audio(text, voice="en-US-AriaNeural", rate="+0%", pi
         st.error(f"Error generating audio: {str(e)}")
         return None
 
+def run_async_audio_generation(audio_summary):
+    """Run async audio generation in sync context"""
+    try:
+        # Try to get existing event loop
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # Create new event loop if none exists
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    try:
+        if loop.is_running():
+            # If loop is already running, use nest_asyncio to handle nested calls
+            try:
+                import nest_asyncio
+                nest_asyncio.apply()
+                return loop.run_until_complete(generate_edge_tts_audio(audio_summary))
+            except ImportError:
+                # Fallback: create a simple audio placeholder
+                st.warning("Audio generation requires nest_asyncio. Install with: pip install nest_asyncio")
+                return None
+        else:
+            return loop.run_until_complete(generate_edge_tts_audio(audio_summary))
+    except Exception as e:
+        st.error(f"Error in audio generation: {str(e)}")
+        return None
+
+def create_downloadable_report(analysis):
+    """Create downloadable text report"""
+    if "error" in analysis:
+        return "Analysis Error: Unable to generate report"
+    
+    report_text = f"""
+DENTAL ANALYSIS REPORT
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+═══════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════
+Cavity Stage: {analysis.get('cavity_stage', 'Unknown')}
+Severity: {analysis.get('severity_level', 'Unknown')}
+Emergency Level: {analysis.get('emergency_level', 'None')}
+Cavity Present: {'Yes' if analysis.get('cavity_present', False) else 'No'}
+
+═══════════════════════════════════════════════════════
+VISIBLE ISSUES
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {issue}" for issue in analysis.get('visible_issues', ['None identified'])])}
+
+═══════════════════════════════════════════════════════
+POSSIBLE CAUSES
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {cause}" for cause in analysis.get('possible_causes', ['Not specified'])])}
+
+═══════════════════════════════════════════════════════
+RECOMMENDED TREATMENTS
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {treatment}" for treatment in analysis.get('recommended_treatments', ['Consult dentist'])])}
+
+═══════════════════════════════════════════════════════
+IMMEDIATE CONCERNS
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {concern}" for concern in analysis.get('immediate_concerns', ['None identified'])])}
+
+═══════════════════════════════════════════════════════
+PREVENTION TIPS
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {tip}" for tip in analysis.get('prevention_tips', ['Maintain good oral hygiene'])])}
+
+═══════════════════════════════════════════════════════
+HOME CARE INSTRUCTIONS
+═══════════════════════════════════════════════════════
+{chr(10).join([f"• {instruction}" for instruction in analysis.get('home_care_instructions', ['Follow dentist recommendations'])])}
+
+═══════════════════════════════════════════════════════
+ADDITIONAL INFORMATION
+═══════════════════════════════════════════════════════
+When to See Dentist: {analysis.get('when_to_see_dentist', 'As soon as possible')}
+Estimated Timeline: {analysis.get('estimated_timeline', 'Not specified')}
+Prognosis: {analysis.get('prognosis', 'Consult dentist for detailed prognosis')}
+
+Affected Teeth: {', '.join(analysis.get('affected_teeth', [])) or 'Not specified'}
+
+Additional Notes: {analysis.get('additional_notes', 'None')}
+
+═══════════════════════════════════════════════════════
+DISCLAIMER
+═══════════════════════════════════════════════════════
+This AI analysis is for educational purposes only and should not replace 
+professional dental consultation. Always consult with a qualified dentist 
+for proper diagnosis and treatment.
+    """
+    return report_text.strip()
+
 def main():
     # Header
     st.markdown('<h1 class="main-header">🦷 Dental Analysis Portal</h1>', unsafe_allow_html=True)
@@ -329,14 +433,31 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("⚙️ Configuration")
-        api_key = st.text_input("OpenRouter API Key", type="password", help="Enter your OpenRouter API key")
+        if "OPENROUTER_API_KEY" in os.environ:
+            api_key = os.getenv("OPENROUTER_API_KEY")
+            st.success("✅ OpenRouter API Key found in environment variables")
+        else:
+            st.warning("⚠️ OpenRouter API Key not found in environment variables")
+            api_key = st.text_input("OpenRouter API Key", type="password", help="Enter your OpenRouter API key")
+
+        # api_key = os.getenv("OPENROUTER_API_KEY", api_key)
+        st.header("🎵 Audio Settings")
+        voice_options = {
+            "🇺🇸 Aria (Female)": "en-US-AriaNeural",
+            "🇺🇸 Guy (Male)": "en-US-GuyNeural",
+            "🇺🇸 Jenny (Female)": "en-US-JennyNeural",
+            "🇬🇧 Libby (Female)": "en-GB-LibbyNeural",
+            "🇬🇧 Ryan (Male)": "en-GB-RyanNeural"
+        }
+        selected_voice = st.selectbox("Voice Selection", list(voice_options.keys()))
+        audio_speed = st.selectbox("Speech Speed", ["-20%", "-10%", "+0%", "+10%", "+20%"], index=2)
         
         st.header("📋 Instructions")
         st.markdown("""
         1. Enter your OpenRouter API key
         2. Upload a clear image of the tooth/teeth
-        3. Click 'Analyze Image' for detailed analysis
-        4. Review the comprehensive report
+        3. Click 'Analyze Image' for instant analysis
+        4. Get both report and audio summary automatically
         
         **Image Tips:**
         - Use good lighting
@@ -353,7 +474,7 @@ def main():
         st.markdown("""
         <div class="info-card">
             <h3>Welcome to the Dental Analysis Portal</h3>
-            <p>This AI-powered tool helps analyze dental images to identify potential cavities and provide comprehensive oral health insights.</p>
+            <p>This AI-powered tool helps analyze dental images to identify potential cavities and provide comprehensive oral health insights with instant audio summaries.</p>
             <p>Please enter your OpenRouter API key in the sidebar to get started.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -375,131 +496,15 @@ def main():
             st.image(image, caption="Uploaded Image", use_column_width=True)
         
         # Analysis button
-        if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
-            with st.spinner("🤖 AI is analyzing your dental image... This may take a few moments."):
-                analysis = analyze_tooth_image(image, api_key)
-                
-                st.header("📊 Analysis Results")
-                display_analysis_results(analysis)
-
-                # Audio options - show immediately after analysis
-                if "error" not in analysis:
-                    st.header("🎵 Audio Options")
-
-                    audio_summary = generate_audio_summary(analysis)
-
-                    col_audio1, col_audio2 = st.columns(2)
-
-                    with col_audio1:
-                        st.download_button(
-                            label="🎙️ Download Audio Script",
-                            data=audio_summary,
-                            file_name=f"dental_audio_script_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                            mime="text/plain"
-                        )
-
-                    with col_audio2:
-                        # Audio generation state management
-                        if "audio_generated" not in st.session_state:
-                            st.session_state.audio_generated = False
-                            st.session_state.audio_bytes = None
-                            st.session_state.audio_filename = None
-
-                        if st.button("🎵 Generate & Download MP3", key="download_mp3"):
-                            with st.spinner("🎙️ Generating MP3 audio file..."):
-                                audio_path = asyncio.run(generate_edge_tts_audio(
-                                    audio_summary,
-                                    "en-US-AriaNeural",
-                                    "+0%",
-                                    "+0Hz"
-                                ))
-
-                                if audio_path:
-                                    with open(audio_path, "rb") as audio_file:
-                                        st.session_state.audio_bytes = audio_file.read()
-                                    st.session_state.audio_filename = f"dental_analysis_audio_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3"
-                                    st.session_state.audio_generated = True
-                                    os.unlink(audio_path)
-                                    st.success("✅ Audio generated successfully!")
-                                else:
-                                    st.error("❌ Failed to generate audio. Please try again.")
-
-                        # Show download button if audio was generated
-                        if st.session_state.audio_generated and st.session_state.audio_bytes:
-                            st.download_button(
-                                label="💾 Download MP3 Audio",
-                                data=st.session_state.audio_bytes,
-                                file_name=st.session_state.audio_filename,
-                                mime="audio/mp3",
-                                key="final_download"
-                            )
-
-                # Save analysis option
-                if "error" not in analysis:
-                    analysis_data = {
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "analysis": analysis
-                    }
-
-                    if st.button("💾 Save Analysis Report"):
-                        # Convert to downloadable format
-                        report_text = f"""
-DENTAL ANALYSIS REPORT
-Generated: {analysis_data['timestamp']}
-
-Cavity Stage: {analysis.get('cavity_stage', 'Unknown')}
-Severity: {analysis.get('severity_level', 'Unknown')}
-Emergency Level: {analysis.get('emergency_level', 'None')}
-
-Visible Issues:
-{chr(10).join([f"• {issue}" for issue in analysis.get('visible_issues', [])])}
-
-Possible Causes:
-{chr(10).join([f"• {cause}" for cause in analysis.get('possible_causes', [])])}
-
-Recommended Treatments:
-{chr(10).join([f"• {treatment}" for treatment in analysis.get('recommended_treatments', [])])}
-
-Prevention Tips:
-{chr(10).join([f"• {tip}" for tip in analysis.get('prevention_tips', [])])}
-
-Home Care Instructions:
-{chr(10).join([f"• {instruction}" for instruction in analysis.get('home_care_instructions', [])])}
-
-When to See Dentist: {analysis.get('when_to_see_dentist', 'As soon as possible')}
-                        """
-
-                        st.download_button(
-                            label="� Download Report",
-                            data=report_text,
-                            file_name=f"dental_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                            mime="text/plain"
-                        )
-    
-    # Educational content
-    st.header("📚 Cavity Stages Guide")
-    
-    stages_info = {
-        "Stage 0": ("No Cavity", "Healthy tooth or very early demineralization", "#c6f6d5"),
-        "Stage 1": ("Early Enamel Decay", "White spots or early enamel damage", "#fed7d7"),
-        "Stage 2": ("Dentin Decay", "Cavity has reached the dentin layer", "#fbb6ce"),
-        "Stage 3": ("Pulp Involvement", "Infection has reached the tooth's pulp", "#fc8181"),
-        "Stage 4": ("Abscess/Severe", "Advanced infection, possible abscess", "#e53e3e")
-    }
-    
-    cols = st.columns(5)
-    for i, (stage, (title, desc, color)) in enumerate(stages_info.items()):
-        with cols[i]:
-            st.markdown(f"""
-            <div style="background-color: {color}; padding: 1rem; border-radius: 8px; text-align: center;">
-                <h4>{stage}</h4>
-                <p><strong>{title}</strong></p>
-                <p style="font-size: 0.9em;">{desc}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
+        if st.button("🔍 Analyze Image & Generate Audio", type="primary", use_container_width=True):
+            # Create progress bar
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Step 1: Image Analysis
+            status_text.text("🤖 Analyzing dental image...")
+            progress_bar.progress(20)
+            
             analysis = analyze_tooth_image(image, api_key)
             progress_bar.progress(50)
             
