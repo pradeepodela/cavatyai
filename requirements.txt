@@ -2,3 +2,4 @@ streamlit
 python-dotenv
 pandas
 pillow
+edge-tts
