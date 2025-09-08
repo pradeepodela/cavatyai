@@ -3,7 +3,7 @@ python-dotenv
 pandas
 pillow
 edge-tts
-opencv-python
+opencv-python-headless
 pillow
 matplotlib
 numpy
