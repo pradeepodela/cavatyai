@@ -10,6 +10,11 @@ import asyncio
 import os
 import tempfile
 from dotenv import load_dotenv
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 
 load_dotenv()
 
@@ -81,6 +86,43 @@ def encode_image(image):
     image.save(buffered, format="JPEG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     return img_str
+
+
+def show_image_processing(image):
+    """Perform and display image processing analysis"""
+    st.header("🖼️ Image Processing & Analysis")
+
+    # Convert PIL to OpenCV format
+    img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+
+    # Canny edge detection
+    edges = cv2.Canny(gray, 100, 200)
+
+    # Histogram of pixel intensities
+    fig, ax = plt.subplots()
+    ax.hist(gray.ravel(), bins=256, range=(0, 256), color='gray')
+    ax.set_title("Histogram of Pixel Intensities")
+    ax.set_xlabel("Pixel Intensity")
+    ax.set_ylabel("Frequency")
+    st.pyplot(fig)
+
+    # CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe_img = clahe.apply(gray)
+
+    # Display results
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.image(gray, caption="Grayscale", use_column_width=True, clamp=True)
+    with col2:
+        st.image(edges, caption="Canny Edge Detection", use_column_width=True, clamp=True)
+    with col3:
+        st.image(clahe_img, caption="CLAHE Enhanced", use_column_width=True, clamp=True)
+
+
 
 def analyze_tooth_image(image, api_key):
     """Analyze tooth image using Gemini API through OpenRouter"""
@@ -494,7 +536,7 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.image(image, caption="Uploaded Image", use_column_width=True)
-        
+        show_image_processing(image)
         # Analysis button
         if st.button("🔍 Analyze Image & Generate Audio", type="primary", use_container_width=True):
             # Create progress bar
