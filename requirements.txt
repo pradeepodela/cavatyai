@@ -4,7 +4,6 @@ pandas
 pillow
 edge-tts
 opencv-python
-tempfile
 pillow
 matplotlib
 numpy
