@@ -14,9 +14,319 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-
 load_dotenv()
+
+# Language translations dictionary
+TRANSLATIONS = {
+    "en": {
+        "page_title": "🦷 Dental Analysis Portal",
+        "main_header": "🦷 Dental Analysis Portal",
+        "config": "⚙️ Configuration",
+        "api_key_found": "✅ OpenRouter API Key found in environment variables",
+        "api_key_not_found": "⚠️ OpenRouter API Key not found in environment variables",
+        "api_key_label": "OpenRouter API Key",
+        "language_selection": "🌍 Language / भाषा / Idioma",
+        "audio_settings": "🎵 Audio Settings",
+        "voice_selection": "Voice Selection",
+        "speech_speed": "Speech Speed",
+        "instructions": "📋 Instructions",
+        "instructions_text": """
+        1. Enter your OpenRouter API key
+        2. Upload a clear image of the tooth/teeth
+        3. Click 'Analyze Image' for instant analysis
+        4. Get both report and audio summary automatically
+        
+        **Image Tips:**
+        - Use good lighting
+        - Keep the camera steady
+        - Focus on the affected area
+        - Avoid blurry images
+        """,
+        "disclaimer": "⚠️ Disclaimer",
+        "disclaimer_text": "This AI analysis is for educational purposes only and should not replace professional dental consultation. Always consult with a qualified dentist for proper diagnosis and treatment.",
+        "welcome_title": "Welcome to the Dental Analysis Portal",
+        "welcome_text": "This AI-powered tool helps analyze dental images to identify potential cavities and provide comprehensive oral health insights with instant audio summaries.",
+        "enter_api_key": "Please enter your OpenRouter API key in the sidebar to get started.",
+        "upload_image": "📤 Upload Tooth Image",
+        "upload_help": "Upload a clear image of the tooth or dental area you want analyzed",
+        "uploaded_image": "Uploaded Image",
+        "analyze_button": "🔍 Analyze Image & Generate Audio",
+        "analyzing": "🤖 Analyzing dental image...",
+        "generating_audio": "🎙️ Generating audio summary...",
+        "creating_audio": "🎵 Creating audio file...",
+        "analysis_complete": "✅ Analysis complete!",
+        "analysis_results": "📊 Analysis Results",
+        "audio_summary": "🎵 Audio Summary",
+        "audio_summary_text": "Listen to your dental analysis summary below:",
+        "download_audio": "💾 Download Audio",
+        "download_report": "📄 Download Report",
+        "download_script": "📝 Download Script",
+        "audio_failed": "🔊 Audio generation failed, but you can still download the text summary:",
+        "audio_script": "Audio Script",
+        "analysis_failed": "❌ Analysis Failed",
+        "cavity_stages_guide": "📚 Cavity Stages Guide",
+        "stage_0": "No Cavity",
+        "stage_0_desc": "Healthy tooth or very early demineralization",
+        "stage_1": "Early Enamel Decay",
+        "stage_1_desc": "White spots or early enamel damage",
+        "stage_2": "Dentin Decay",
+        "stage_2_desc": "Cavity has reached the dentin layer",
+        "stage_3": "Pulp Involvement",
+        "stage_3_desc": "Infection has reached the tooth's pulp",
+        "stage_4": "Abscess/Severe",
+        "stage_4_desc": "Advanced infection, possible abscess",
+        "visible_issues": "👁️ Visible Issues",
+        "possible_causes": "🔍 Possible Causes",
+        "affected_teeth": "🦷 Affected Teeth",
+        "recommended_treatments": "💉 Recommended Treatments",
+        "immediate_concerns": "🚨 Immediate Concerns",
+        "dentist_timeline": "📅 Dental Visit Timeline",
+        "prevention_tips": "🛡️ Prevention Tips",
+        "home_care": "🏠 Home Care Instructions",
+        "additional_details": "📊 Additional Analysis Details",
+        "emergency_alert": "⚠️ Emergency Alert",
+        "emergency_text": "Immediate dental attention recommended!",
+        "image_processing": "🖼️ Image Processing & Analysis",
+        "grayscale": "Grayscale",
+        "edge_detection": "Canny Edge Detection",
+        "clahe_enhanced": "CLAHE Enhanced",
+        "histogram_title": "Histogram of Pixel Intensities",
+        "pixel_intensity": "Pixel Intensity",
+        "frequency": "Frequency"
+    },
+    "hi": {
+        "page_title": "🦷 दंत विश्लेषण पोर्टल",
+        "main_header": "🦷 दंत विश्लेषण पोर्टल",
+        "config": "⚙️ कॉन्फ़िगरेशन",
+        "api_key_found": "✅ OpenRouter API कुंजी पर्यावरण चर में मिली",
+        "api_key_not_found": "⚠️ OpenRouter API कुंजी पर्यावरण चर में नहीं मिली",
+        "api_key_label": "OpenRouter API कुंजी",
+        "language_selection": "🌍 भाषा चुनें / Language / Idioma",
+        "audio_settings": "🎵 ऑडियो सेटिंग्स",
+        "voice_selection": "आवाज़ चयन",
+        "speech_speed": "बोलने की गति",
+        "instructions": "📋 निर्देश",
+        "instructions_text": """
+        1. अपनी OpenRouter API कुंजी दर्ज करें
+        2. दांत/दांतों की स्पष्ट तस्वीर अपलोड करें
+        3. त्वरित विश्लेषण के लिए 'छवि विश्लेषण करें' पर क्लिक करें
+        4. स्वचालित रूप से रिपोर्ट और ऑडियो सारांश प्राप्त करें
+        
+        **छवि सुझाव:**
+        - अच्छी रोशनी का उपयोग करें
+        - कैमरा स्थिर रखें
+        - प्रभावित क्षेत्र पर फोकस करें
+        - धुंधली छवियों से बचें
+        """,
+        "disclaimer": "⚠️ अस्वीकरण",
+        "disclaimer_text": "यह AI विश्लेषण केवल शैक्षिक उद्देश्यों के लिए है और पेशेवर दंत परामर्श का स्थान नहीं ले सकता। उचित निदान और उपचार के लिए हमेशा योग्य दंत चिकित्सक से परामर्श करें।",
+        "welcome_title": "दंत विश्लेषण पोर्टल में आपका स्वागत है",
+        "welcome_text": "यह AI-संचालित उपकरण दंत छवियों का विश्लेषण करने में मदद करता है ताकि संभावित कैविटी की पहचान की जा सके और तत्काल ऑडियो सारांश के साथ व्यापक मौखिक स्वास्थ्य जानकारी प्रदान की जा सके।",
+        "enter_api_key": "शुरू करने के लिए कृपया साइडबार में अपनी OpenRouter API कुंजी दर्ज करें।",
+        "upload_image": "📤 दांत की छवि अपलोड करें",
+        "upload_help": "विश्लेषण के लिए दांत या दंत क्षेत्र की स्पष्ट छवि अपलोड करें",
+        "uploaded_image": "अपलोड की गई छवि",
+        "analyze_button": "🔍 छवि विश्लेषण करें और ऑडियो बनाएं",
+        "analyzing": "🤖 दंत छवि का विश्लेषण कर रहे हैं...",
+        "generating_audio": "🎙️ ऑडियो सारांश बना रहे हैं...",
+        "creating_audio": "🎵 ऑडियो फ़ाइल बना रहे हैं...",
+        "analysis_complete": "✅ विश्लेषण पूर्ण!",
+        "analysis_results": "📊 विश्लेषण परिणाम",
+        "audio_summary": "🎵 ऑडियो सारांश",
+        "audio_summary_text": "नीचे अपने दंत विश्लेषण सारांश को सुनें:",
+        "download_audio": "💾 ऑडियो डाउनलोड करें",
+        "download_report": "📄 रिपोर्ट डाउनलोड करें",
+        "download_script": "📝 स्क्रिप्ट डाउनलोड करें",
+        "audio_failed": "🔊 ऑडियो जेनरेशन विफल रहा, लेकिन आप अभी भी टेक्स्ट सारांश डाउनलोड कर सकते हैं:",
+        "audio_script": "ऑडियो स्क्रिप्ट",
+        "analysis_failed": "❌ विश्लेषण विफल",
+        "cavity_stages_guide": "📚 कैविटी चरण गाइड",
+        "stage_0": "कोई कैविटी नहीं",
+        "stage_0_desc": "स्वस्थ दांत या बहुत प्रारंभिक डीमिनरलाइजेशन",
+        "stage_1": "प्रारंभिक इनेमल क्षय",
+        "stage_1_desc": "सफेद धब्बे या प्रारंभिक इनेमल क्षति",
+        "stage_2": "डेंटिन क्षय",
+        "stage_2_desc": "कैविटी डेंटिन परत तक पहुंच गई है",
+        "stage_3": "पल्प संलग्नता",
+        "stage_3_desc": "संक्रमण दांत के पल्प तक पहुंच गया है",
+        "stage_4": "फोड़ा/गंभीर",
+        "stage_4_desc": "उन्नत संक्रमण, संभावित फोड़ा",
+        "visible_issues": "👁️ दिखाई देने वाली समस्याएं",
+        "possible_causes": "🔍 संभावित कारण",
+        "affected_teeth": "🦷 प्रभावित दांत",
+        "recommended_treatments": "💉 अनुशंसित उपचार",
+        "immediate_concerns": "🚨 तत्काल चिंताएं",
+        "dentist_timeline": "📅 दंत चिकित्सक की यात्रा समयरेखा",
+        "prevention_tips": "🛡️ रोकथाम युक्तियाँ",
+        "home_care": "🏠 घरेलू देखभाल निर्देश",
+        "additional_details": "📊 अतिरिक्त विश्लेषण विवरण",
+        "emergency_alert": "⚠️ आपातकालीन चेतावनी",
+        "emergency_text": "तत्काल दंत चिकित्सा ध्यान अनुशंसित!",
+        "image_processing": "🖼️ छवि प्रसंस्करण और विश्लेषण",
+        "grayscale": "ग्रेस्केल",
+        "edge_detection": "कैनी एज डिटेक्शन",
+        "clahe_enhanced": "CLAHE एन्हांस्ड",
+        "histogram_title": "पिक्सेल तीव्रता का हिस्टोग्राम",
+        "pixel_intensity": "पिक्सेल तीव्रता",
+        "frequency": "आवृत्ति"
+    },
+    "es": {
+        "page_title": "🦷 Portal de Análisis Dental",
+        "main_header": "🦷 Portal de Análisis Dental",
+        "config": "⚙️ Configuración",
+        "api_key_found": "✅ Clave API de OpenRouter encontrada en variables de entorno",
+        "api_key_not_found": "⚠️ Clave API de OpenRouter no encontrada en variables de entorno",
+        "api_key_label": "Clave API de OpenRouter",
+        "language_selection": "🌍 Seleccionar Idioma / Language / भाषा",
+        "audio_settings": "🎵 Configuración de Audio",
+        "voice_selection": "Selección de Voz",
+        "speech_speed": "Velocidad del Habla",
+        "instructions": "📋 Instrucciones",
+        "instructions_text": """
+        1. Ingrese su clave API de OpenRouter
+        2. Cargue una imagen clara del diente/dientes
+        3. Haga clic en 'Analizar Imagen' para análisis instantáneo
+        4. Obtenga automáticamente el informe y resumen de audio
+        
+        **Consejos de Imagen:**
+        - Use buena iluminación
+        - Mantenga la cámara estable
+        - Enfoque en el área afectada
+        - Evite imágenes borrosas
+        """,
+        "disclaimer": "⚠️ Descargo de Responsabilidad",
+        "disclaimer_text": "Este análisis de IA es solo para fines educativos y no debe reemplazar la consulta dental profesional. Siempre consulte con un dentista calificado para un diagnóstico y tratamiento adecuados.",
+        "welcome_title": "Bienvenido al Portal de Análisis Dental",
+        "welcome_text": "Esta herramienta impulsada por IA ayuda a analizar imágenes dentales para identificar posibles caries y proporcionar información completa sobre la salud bucal con resúmenes de audio instantáneos.",
+        "enter_api_key": "Por favor, ingrese su clave API de OpenRouter en la barra lateral para comenzar.",
+        "upload_image": "📤 Cargar Imagen Dental",
+        "upload_help": "Cargue una imagen clara del diente o área dental que desea analizar",
+        "uploaded_image": "Imagen Cargada",
+        "analyze_button": "🔍 Analizar Imagen y Generar Audio",
+        "analyzing": "🤖 Analizando imagen dental...",
+        "generating_audio": "🎙️ Generando resumen de audio...",
+        "creating_audio": "🎵 Creando archivo de audio...",
+        "analysis_complete": "✅ ¡Análisis completo!",
+        "analysis_results": "📊 Resultados del Análisis",
+        "audio_summary": "🎵 Resumen de Audio",
+        "audio_summary_text": "Escuche su resumen de análisis dental a continuación:",
+        "download_audio": "💾 Descargar Audio",
+        "download_report": "📄 Descargar Informe",
+        "download_script": "📝 Descargar Guión",
+        "audio_failed": "🔊 La generación de audio falló, pero aún puede descargar el resumen de texto:",
+        "audio_script": "Guión de Audio",
+        "analysis_failed": "❌ Análisis Fallido",
+        "cavity_stages_guide": "📚 Guía de Etapas de Caries",
+        "stage_0": "Sin Caries",
+        "stage_0_desc": "Diente sano o desmineralización muy temprana",
+        "stage_1": "Caries Temprana del Esmalte",
+        "stage_1_desc": "Manchas blancas o daño temprano del esmalte",
+        "stage_2": "Caries de Dentina",
+        "stage_2_desc": "La caries ha alcanzado la capa de dentina",
+        "stage_3": "Afectación Pulpar",
+        "stage_3_desc": "La infección ha alcanzado la pulpa del diente",
+        "stage_4": "Absceso/Grave",
+        "stage_4_desc": "Infección avanzada, posible absceso",
+        "visible_issues": "👁️ Problemas Visibles",
+        "possible_causes": "🔍 Causas Posibles",
+        "affected_teeth": "🦷 Dientes Afectados",
+        "recommended_treatments": "💉 Tratamientos Recomendados",
+        "immediate_concerns": "🚨 Preocupaciones Inmediatas",
+        "dentist_timeline": "📅 Cronograma de Visita al Dentista",
+        "prevention_tips": "🛡️ Consejos de Prevención",
+        "home_care": "🏠 Instrucciones de Cuidado en Casa",
+        "additional_details": "📊 Detalles Adicionales del Análisis",
+        "emergency_alert": "⚠️ Alerta de Emergencia",
+        "emergency_text": "¡Se recomienda atención dental inmediata!",
+        "image_processing": "🖼️ Procesamiento y Análisis de Imagen",
+        "grayscale": "Escala de Grises",
+        "edge_detection": "Detección de Bordes Canny",
+        "clahe_enhanced": "Mejorado CLAHE",
+        "histogram_title": "Histograma de Intensidades de Píxeles",
+        "pixel_intensity": "Intensidad de Píxel",
+        "frequency": "Frecuencia"
+    },
+    "ta": {
+        "page_title": "🦷 பல் பகுப்பாய்வு போர்டல்",
+        "main_header": "🦷 பல் பகுப்பாய்வு போர்டல்",
+        "config": "⚙️ உள்ளமைவு",
+        "api_key_found": "✅ OpenRouter API விசை சூழல் மாறிகளில் கண்டறியப்பட்டது",
+        "api_key_not_found": "⚠️ OpenRouter API விசை சூழல் மாறிகளில் காணப்படவில்லை",
+        "api_key_label": "OpenRouter API விசை",
+        "language_selection": "🌍 மொழியைத் தேர்ந்தெடுக்கவும் / Language / भाषा",
+        "audio_settings": "🎵 ஆடியோ அமைப்புகள்",
+        "voice_selection": "குரல் தேர்வு",
+        "speech_speed": "பேச்சு வேகம்",
+        "instructions": "📋 வழிமுறைகள்",
+        "instructions_text": """
+        1. உங்கள் OpenRouter API விசையை உள்ளிடவும்
+        2. பல்/பற்களின் தெளிவான படத்தை பதிவேற்றவும்
+        3. உடனடி பகுப்பாய்வுக்கு 'படத்தை பகுப்பாய்வு செய்' என்பதைக் கிளிக் செய்யவும்
+        4. தானாகவே அறிக்கை மற்றும் ஆடியோ சுருக்கத்தைப் பெறவும்
+        
+        **படம் குறிப்புகள்:**
+        - நல்ல வெளிச்சத்தைப் பயன்படுத்தவும்
+        - கேமராவை நிலையாக வைக்கவும்
+        - பாதிக்கப்பட்ட பகுதியில் கவனம் செலுத்தவும்
+        - மங்கலான படங்களைத் தவிர்க்கவும்
+        """,
+        "disclaimer": "⚠️ மறுப்பு",
+        "disclaimer_text": "இந்த AI பகுப்பாய்வு கல்வி நோக்கங்களுக்காக மட்டுமே மற்றும் தொழில்முறை பல் ஆலோசனையை மாற்றக்கூடாது. சரியான நோய் கண்டறிதல் மற்றும் சிகிச்சைக்கு எப்போதும் தகுதிவாய்ந்த பல் மருத்துவரை அணுகவும்.",
+        "welcome_title": "பல் பகுப்பாய்வு போர்டலுக்கு வரவேற்கிறோம்",
+        "welcome_text": "இந்த AI-இயங்கும் கருவி பல் படங்களை பகுப்பாய்வு செய்து சாத்தியமான குழிகளை அடையாளம் காணவும் உடனடி ஆடியோ சுருக்கங்களுடன் விரிவான வாய் சுகாதார நுண்ணறிவுகளை வழங்கவும் உதவுகிறது.",
+        "enter_api_key": "தொடங்க பக்கப்பட்டையில் உங்கள் OpenRouter API விசையை உள்ளிடவும்.",
+        "upload_image": "📤 பல் படத்தை பதிவேற்றவும்",
+        "upload_help": "நீங்கள் பகுப்பாய்வு செய்ய விரும்பும் பல் அல்லது பல் பகுதியின் தெளிவான படத்தை பதிவேற்றவும்",
+        "uploaded_image": "பதிவேற்றப்பட்ட படம்",
+        "analyze_button": "🔍 படத்தை பகுப்பாய்வு செய்து ஆடியோவை உருவாக்கவும்",
+        "analyzing": "🤖 பல் படத்தை பகுப்பாய்வு செய்கிறது...",
+        "generating_audio": "🎙️ ஆடியோ சுருக்கத்தை உருவாக்குகிறது...",
+        "creating_audio": "🎵 ஆடியோ கோப்பை உருவாக்குகிறது...",
+        "analysis_complete": "✅ பகுப்பாய்வு முடிந்தது!",
+        "analysis_results": "📊 பகுப்பாய்வு முடிவுகள்",
+        "audio_summary": "🎵 ஆடியோ சுருக்கம்",
+        "audio_summary_text": "கீழே உங்கள் பல் பகுப்பாய்வு சுருக்கத்தைக் கேளுங்கள்:",
+        "download_audio": "💾 ஆடியோவை பதிவிறக்கவும்",
+        "download_report": "📄 அறிக்கையை பதிவிறக்கவும்",
+        "download_script": "📝 ஸ்கிரிப்டை பதிவிறக்கவும்",
+        "audio_failed": "🔊 ஆடியோ உருவாக்கம் தோல்வியுற்றது, ஆனால் நீங்கள் இன்னும் உரை சுருக்கத்தை பதிவிறக்கலாம்:",
+        "audio_script": "ஆடியோ ஸ்கிரிப்ட்",
+        "analysis_failed": "❌ பகுப்பாய்வு தோல்வியடைந்தது",
+        "cavity_stages_guide": "📚 குழி நிலைகள் வழிகாட்டி",
+        "stage_0": "குழி இல்லை",
+        "stage_0_desc": "ஆரோக்கியமான பல் அல்லது மிக ஆரம்ப நீர்மின்மாற்றம்",
+        "stage_1": "ஆரம்ப பற்சிப்பி சிதைவு",
+        "stage_1_desc": "வெள்ளை புள்ளிகள் அல்லது ஆரம்ப பற்சிப்பி சேதம்",
+        "stage_2": "டென்டின் சிதைவு",
+        "stage_2_desc": "குழி டென்டின் அடுக்கை அடைந்துள்ளது",
+        "stage_3": "கூழ் சம்பந்தப்படுதல்",
+        "stage_3_desc": "தொற்று பல்லின் கூழை அடைந்துள்ளது",
+        "stage_4": "புண்/கடுமையான",
+        "stage_4_desc": "மேம்பட்ட தொற்று, சாத்தியமான புண்",
+        "visible_issues": "👁️ தெரியும் பிரச்சினைகள்",
+        "possible_causes": "🔍 சாத்தியமான காரணங்கள்",
+        "affected_teeth": "🦷 பாதிக்கப்பட்ட பற்கள்",
+        "recommended_treatments": "💉 பரிந்துரைக்கப்பட்ட சிகிச்சைகள்",
+        "immediate_concerns": "🚨 உடனடி கவலைகள்",
+        "dentist_timeline": "📅 பல் மருத்துவர் வருகை காலவரிசை",
+        "prevention_tips": "🛡️ தடுப்பு குறிப்புகள்",
+        "home_care": "🏠 வீட்டு பராமரிப்பு வழிமுறைகள்",
+        "additional_details": "📊 கூடுதல் பகுப்பாய்வு விவரங்கள்",
+        "emergency_alert": "⚠️ அவசர எச்சரிக்கை",
+        "emergency_text": "உடனடி பல் சிகிச்சை பரிந்துரைக்கப்படுகிறது!",
+        "image_processing": "🖼️ படம் செயலாக்கம் மற்றும் பகுப்பாய்வு",
+        "grayscale": "சாம்பல் அளவு",
+        "edge_detection": "கேனி விளிம்பு கண்டறிதல்",
+        "clahe_enhanced": "CLAHE மேம்படுத்தப்பட்டது",
+        "histogram_title": "பிக்சல் தீவிரத்தின் வரலாற்று வரைபடம்",
+        "pixel_intensity": "பிக்சல் தீவிரம்",
+        "frequency": "அதிர்வெண்"
+    }
+}
+
+def t(key, lang="en"):
+    """Translation helper function"""
+    return TRANSLATIONS.get(lang, TRANSLATIONS["en"]).get(key, key)
 
 # Page configuration
 st.set_page_config(
@@ -25,6 +335,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Initialize session state for language
+if 'language' not in st.session_state:
+    st.session_state.language = 'en'
 
 # Custom CSS for better styling
 st.markdown("""
@@ -88,9 +402,9 @@ def encode_image(image):
     return img_str
 
 
-def show_image_processing(image):
+def show_image_processing(image, lang):
     """Perform and display image processing analysis"""
-    st.header("🖼️ Image Processing & Analysis")
+    st.header(t("image_processing", lang))
 
     # Convert PIL to OpenCV format
     img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -104,9 +418,9 @@ def show_image_processing(image):
     # Histogram of pixel intensities
     fig, ax = plt.subplots()
     ax.hist(gray.ravel(), bins=256, range=(0, 256), color='gray')
-    ax.set_title("Histogram of Pixel Intensities")
-    ax.set_xlabel("Pixel Intensity")
-    ax.set_ylabel("Frequency")
+    ax.set_title(t("histogram_title", lang))
+    ax.set_xlabel(t("pixel_intensity", lang))
+    ax.set_ylabel(t("frequency", lang))
     st.pyplot(fig)
 
     # CLAHE (Contrast Limited Adaptive Histogram Equalization)
@@ -116,25 +430,72 @@ def show_image_processing(image):
     # Display results
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.image(gray, caption="Grayscale", use_column_width=True, clamp=True)
+        st.image(gray, caption=t("grayscale", lang), use_column_width=True, clamp=True)
     with col2:
-        st.image(edges, caption="Canny Edge Detection", use_column_width=True, clamp=True)
+        st.image(edges, caption=t("edge_detection", lang), use_column_width=True, clamp=True)
     with col3:
-        st.image(clahe_img, caption="CLAHE Enhanced", use_column_width=True, clamp=True)
+        st.image(clahe_img, caption=t("clahe_enhanced", lang), use_column_width=True, clamp=True)
 
 
+def translate_text(text, target_lang, api_key):
+    """Translate text using OpenRouter API with Gemini"""
+    if target_lang == "en":
+        return text
+    
+    lang_names = {
+        "hi": "Hindi",
+        "es": "Spanish", 
+        "ta": "Tamil"
+    }
+    
+    prompt = f"Translate the following text to {lang_names.get(target_lang, 'English')}. Only provide the translation, no additional text:\n\n{text}"
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "google/gemini-2.5-flash",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 500,
+        "temperature": 0.3
+    }
+    
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result['choices'][0]['message']['content'].strip()
+        else:
+            return text
+    except:
+        return text
 
-def analyze_tooth_image(image, api_key):
+
+def analyze_tooth_image(image, api_key, lang):
     """Analyze tooth image using Gemini API through OpenRouter"""
     
     # Convert image to base64
     img_base64 = encode_image(image)
     
     # Comprehensive prompt for dental analysis
-    prompt = """
+    lang_instruction = ""
+    if lang != "en":
+        lang_names = {"hi": "Hindi", "es": "Spanish", "ta": "Tamil"}
+        lang_instruction = f"\n\nIMPORTANT: Provide all text fields in {lang_names.get(lang, 'English')} language."
+    
+    prompt = f"""
     You are an expert dental AI assistant. Analyze this tooth/dental image and provide a comprehensive analysis in JSON format with the following structure:
+    If you think there is no cavity or dental issues, please indicate uncertainty appropriately.{lang_instruction}
 
-    {
+    {{
         "cavity_stage": "Stage 0-4 (0=No cavity, 1=Early enamel decay, 2=Dentin decay, 3=Pulp involvement, 4=Abscess/severe infection)",
         "cavity_present": true/false,
         "affected_teeth": ["list of affected tooth numbers if identifiable"],
@@ -150,7 +511,7 @@ def analyze_tooth_image(image, api_key):
         "home_care_instructions": ["immediate home care steps"],
         "when_to_see_dentist": "timeline for dental visit",
         "additional_notes": "any other relevant observations"
-    }
+    }}
 
     Analyze the image carefully and provide detailed, accurate information. If you cannot clearly see dental issues, indicate uncertainty appropriately.
     """
@@ -161,7 +522,7 @@ def analyze_tooth_image(image, api_key):
     }
 
     data = {
-        "model": "google/gemini-flash-1.5",
+        "model": "google/gemini-2.5-flash",
         "messages": [
             {
                 "role": "user",
@@ -212,7 +573,7 @@ def analyze_tooth_image(image, api_key):
     except Exception as e:
         return {"error": f"Request failed: {str(e)}"}
 
-def display_analysis_results(analysis):
+def display_analysis_results(analysis, lang):
     """Display the analysis results in a structured format"""
     
     if "error" in analysis:
@@ -240,8 +601,8 @@ def display_analysis_results(analysis):
     if emergency in ["High", "Critical"]:
         st.markdown(f"""
         <div class="warning-card">
-            <h3>⚠️ Emergency Alert: {emergency} Priority</h3>
-            <p>Immediate dental attention recommended!</p>
+            <h3>{t("emergency_alert", lang)}: {emergency} Priority</h3>
+            <p>{t("emergency_text", lang)}</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -250,7 +611,7 @@ def display_analysis_results(analysis):
     
     with col1:
         # Visible Issues
-        st.subheader("👁️ Visible Issues")
+        st.subheader(t("visible_issues", lang))
         issues = analysis.get("visible_issues", [])
         if issues:
             for issue in issues:
@@ -259,7 +620,7 @@ def display_analysis_results(analysis):
             st.write("No specific issues identified")
         
         # Possible Causes
-        st.subheader("🔍 Possible Causes")
+        st.subheader(t("possible_causes", lang))
         causes = analysis.get("possible_causes", [])
         if causes:
             for cause in causes:
@@ -268,12 +629,12 @@ def display_analysis_results(analysis):
         # Affected Teeth
         affected = analysis.get("affected_teeth", [])
         if affected:
-            st.subheader("🦷 Affected Teeth")
+            st.subheader(t("affected_teeth", lang))
             st.write(", ".join(affected))
     
     with col2:
         # Recommended Treatments
-        st.subheader("💉 Recommended Treatments")
+        st.subheader(t("recommended_treatments", lang))
         treatments = analysis.get("recommended_treatments", [])
         if treatments:
             for treatment in treatments:
@@ -282,30 +643,30 @@ def display_analysis_results(analysis):
         # Immediate Concerns
         concerns = analysis.get("immediate_concerns", [])
         if concerns:
-            st.subheader("🚨 Immediate Concerns")
+            st.subheader(t("immediate_concerns", lang))
             for concern in concerns:
                 st.write(f"• {concern}")
         
         # When to See Dentist
         dentist_timeline = analysis.get("when_to_see_dentist", "As soon as possible")
-        st.subheader("📅 Dental Visit Timeline")
+        st.subheader(t("dentist_timeline", lang))
         st.write(dentist_timeline)
     
     # Prevention and Care
-    st.subheader("🛡️ Prevention Tips")
+    st.subheader(t("prevention_tips", lang))
     prevention = analysis.get("prevention_tips", [])
     if prevention:
         for tip in prevention:
             st.write(f"• {tip}")
     
-    st.subheader("🏠 Home Care Instructions")
+    st.subheader(t("home_care", lang))
     home_care = analysis.get("home_care_instructions", [])
     if home_care:
         for instruction in home_care:
             st.write(f"• {instruction}")
     
     # Additional Information
-    with st.expander("📊 Additional Analysis Details"):
+    with st.expander(t("additional_details", lang)):
         col3, col4 = st.columns(2)
         
         with col3:
@@ -323,7 +684,7 @@ def display_analysis_results(analysis):
         if notes:
             st.write(f"**Additional Notes:** {notes}")
 
-def generate_audio_summary(analysis):
+def generate_audio_summary(analysis, lang):
     """Generate a text summary suitable for audio narration"""
     if "error" in analysis:
         return "An error occurred during the dental analysis. Please try again with a different image."
@@ -339,15 +700,15 @@ def generate_audio_summary(analysis):
 
     visible_issues = analysis.get("visible_issues", [])
     if visible_issues and len(visible_issues) > 0:
-        summary += f" Visible issues include: {', '.join(visible_issues[:3])}."  # Limit to first 3 for brevity
+        summary += f" Visible issues include: {', '.join(visible_issues[:3])}."
 
     treatments = analysis.get("recommended_treatments", [])
     if treatments and len(treatments) > 0:
-        summary += f" Recommended treatments: {', '.join(treatments[:2])}."  # Limit to first 2
+        summary += f" Recommended treatments: {', '.join(treatments[:2])}."
 
     home_care = analysis.get("home_care_instructions", [])
     if home_care and len(home_care) > 0:
-        summary += f" Home care instructions: {', '.join(home_care[:2])}."  # Limit to first 2
+        summary += f" Home care instructions: {', '.join(home_care[:2])}."
 
     dentist_timeline = analysis.get("when_to_see_dentist", "As soon as possible")
     summary += f" When to see dentist: {dentist_timeline}."
@@ -374,34 +735,30 @@ async def generate_edge_tts_audio(text, voice="en-US-AriaNeural", rate="+0%", pi
         st.error(f"Error generating audio: {str(e)}")
         return None
 
-def run_async_audio_generation(audio_summary):
+def run_async_audio_generation(audio_summary, voice, speed):
     """Run async audio generation in sync context"""
     try:
-        # Try to get existing event loop
         loop = asyncio.get_event_loop()
     except RuntimeError:
-        # Create new event loop if none exists
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     
     try:
         if loop.is_running():
-            # If loop is already running, use nest_asyncio to handle nested calls
             try:
                 import nest_asyncio
                 nest_asyncio.apply()
-                return loop.run_until_complete(generate_edge_tts_audio(audio_summary))
+                return loop.run_until_complete(generate_edge_tts_audio(audio_summary, voice, speed))
             except ImportError:
-                # Fallback: create a simple audio placeholder
                 st.warning("Audio generation requires nest_asyncio. Install with: pip install nest_asyncio")
                 return None
         else:
-            return loop.run_until_complete(generate_edge_tts_audio(audio_summary))
+            return loop.run_until_complete(generate_edge_tts_audio(audio_summary, voice, speed))
     except Exception as e:
         st.error(f"Error in audio generation: {str(e)}")
         return None
 
-def create_downloadable_report(analysis):
+def create_downloadable_report(analysis, lang):
     """Create downloadable text report"""
     if "error" in analysis:
         return "Analysis Error: Unable to generate report"
@@ -469,64 +826,96 @@ for proper diagnosis and treatment.
     return report_text.strip()
 
 def main():
+    lang = st.session_state.language
+    
     # Header
-    st.markdown('<h1 class="main-header">🦷 Dental Analysis Portal</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 class="main-header">{t("main_header", lang)}</h1>', unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.header(t("config", lang))
+        
+        # Language Selection
+        st.header(t("language_selection", lang))
+        language_options = {
+            "English": "en",
+            "हिन्दी (Hindi)": "hi",
+            "Español (Spanish)": "es",
+            "தமிழ் (Tamil)": "ta"
+        }
+        selected_lang = st.selectbox(
+            "Select Language",
+            list(language_options.keys()),
+            index=list(language_options.values()).index(st.session_state.language)
+        )
+        
+        if language_options[selected_lang] != st.session_state.language:
+            st.session_state.language = language_options[selected_lang]
+            st.rerun()
+        
+        lang = st.session_state.language
+        
+        # API Key
         if "OPENROUTER_API_KEY" in os.environ:
             api_key = os.getenv("OPENROUTER_API_KEY")
-            st.success("✅ OpenRouter API Key found in environment variables")
+            st.success(t("api_key_found", lang))
         else:
-            st.warning("⚠️ OpenRouter API Key not found in environment variables")
-            api_key = st.text_input("OpenRouter API Key", type="password", help="Enter your OpenRouter API key")
+            st.warning(t("api_key_not_found", lang))
+            api_key = st.text_input(t("api_key_label", lang), type="password")
 
-        # api_key = os.getenv("OPENROUTER_API_KEY", api_key)
-        st.header("🎵 Audio Settings")
+        st.header(t("audio_settings", lang))
+        
+        # Voice options based on language
         voice_options = {
-            "🇺🇸 Aria (Female)": "en-US-AriaNeural",
-            "🇺🇸 Guy (Male)": "en-US-GuyNeural",
-            "🇺🇸 Jenny (Female)": "en-US-JennyNeural",
-            "🇬🇧 Libby (Female)": "en-GB-LibbyNeural",
-            "🇬🇧 Ryan (Male)": "en-GB-RyanNeural"
+            "en": {
+                "🇺🇸 Aria (Female)": "en-US-AriaNeural",
+                "🇺🇸 Guy (Male)": "en-US-GuyNeural",
+                "🇺🇸 Jenny (Female)": "en-US-JennyNeural",
+                "🇬🇧 Libby (Female)": "en-GB-LibbyNeural",
+                "🇬🇧 Ryan (Male)": "en-GB-RyanNeural"
+            },
+            "hi": {
+                "🇮🇳 Swara (Female)": "hi-IN-SwaraNeural",
+                "🇮🇳 Madhur (Male)": "hi-IN-MadhurNeural"
+            },
+            "es": {
+                "🇪🇸 Elvira (Female)": "es-ES-ElviraNeural",
+                "🇪🇸 Alvaro (Male)": "es-ES-AlvaroNeural",
+                "🇲🇽 Dalia (Female)": "es-MX-DaliaNeural",
+                "🇲🇽 Jorge (Male)": "es-MX-JorgeNeural"
+            },
+            "ta": {
+                "🇮🇳 Pallavi (Female)": "ta-IN-PallaviNeural",
+                "🇮🇳 Valluvar (Male)": "ta-IN-ValluvarNeural"
+            }
         }
-        selected_voice = st.selectbox("Voice Selection", list(voice_options.keys()))
-        audio_speed = st.selectbox("Speech Speed", ["-20%", "-10%", "+0%", "+10%", "+20%"], index=2)
         
-        st.header("📋 Instructions")
-        st.markdown("""
-        1. Enter your OpenRouter API key
-        2. Upload a clear image of the tooth/teeth
-        3. Click 'Analyze Image' for instant analysis
-        4. Get both report and audio summary automatically
+        current_voices = voice_options.get(lang, voice_options["en"])
+        selected_voice = st.selectbox(t("voice_selection", lang), list(current_voices.keys()))
+        audio_speed = st.selectbox(t("speech_speed", lang), ["-20%", "-10%", "+0%", "+10%", "+20%"], index=2)
         
-        **Image Tips:**
-        - Use good lighting
-        - Keep the camera steady
-        - Focus on the affected area
-        - Avoid blurry images
-        """)
+        st.header(t("instructions", lang))
+        st.markdown(t("instructions_text", lang))
         
-        st.header("⚠️ Disclaimer")
-        st.warning("This AI analysis is for educational purposes only and should not replace professional dental consultation. Always consult with a qualified dentist for proper diagnosis and treatment.")
+        st.header(t("disclaimer", lang))
+        st.warning(t("disclaimer_text", lang))
     
     # Main content area
     if not api_key:
-        st.markdown("""
+        st.markdown(f"""
         <div class="info-card">
-            <h3>Welcome to the Dental Analysis Portal</h3>
-            <p>This AI-powered tool helps analyze dental images to identify potential cavities and provide comprehensive oral health insights with instant audio summaries.</p>
-            <p>Please enter your OpenRouter API key in the sidebar to get started.</p>
+            <h3>{t("welcome_title", lang)}</h3>
+            <p>{t("welcome_text", lang)}</p>
+            <p>{t("enter_api_key", lang)}</p>
         </div>
         """, unsafe_allow_html=True)
         return
     
     # File upload
     uploaded_file = st.file_uploader(
-        "📤 Upload Tooth Image", 
+        t("upload_image", lang), 
         type=['png', 'jpg', 'jpeg'],
-        help="Upload a clear image of the tooth or dental area you want analyzed"
+        help=t("upload_help", lang)
     )
     
     if uploaded_file is not None:
@@ -535,51 +924,54 @@ def main():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.image(image, caption="Uploaded Image", use_column_width=True)
-        show_image_processing(image)
+            st.image(image, caption=t("uploaded_image", lang), use_column_width=True)
+        
+        show_image_processing(image, lang)
+        
         # Analysis button
-        if st.button("🔍 Analyze Image & Generate Audio", type="primary", use_container_width=True):
+        if st.button(t("analyze_button", lang), type="primary", use_container_width=True):
             # Create progress bar
             progress_bar = st.progress(0)
             status_text = st.empty()
             
             # Step 1: Image Analysis
-            status_text.text("🤖 Analyzing dental image...")
+            status_text.text(t("analyzing", lang))
             progress_bar.progress(20)
             
-            analysis = analyze_tooth_image(image, api_key)
+            analysis = analyze_tooth_image(image, api_key, lang)
             progress_bar.progress(50)
             
             if "error" not in analysis:
                 # Step 2: Generate Audio Summary
-                status_text.text("🎙️ Generating audio summary...")
+                status_text.text(t("generating_audio", lang))
                 progress_bar.progress(70)
                 
-                audio_summary = generate_audio_summary(analysis)
+                audio_summary = generate_audio_summary(analysis, lang)
                 
                 # Step 3: Create Audio File
-                status_text.text("🎵 Creating audio file...")
+                status_text.text(t("creating_audio", lang))
                 progress_bar.progress(90)
                 
-                audio_path = run_async_audio_generation(audio_summary)
+                voice_name = voice_options.get(lang, voice_options["en"])[selected_voice]
+                audio_path = run_async_audio_generation(audio_summary, voice_name, audio_speed)
                 
                 # Complete
                 progress_bar.progress(100)
-                status_text.text("✅ Analysis complete!")
+                status_text.text(t("analysis_complete", lang))
                 
                 # Clear progress indicators
                 progress_bar.empty()
                 status_text.empty()
                 
                 # Display Results
-                st.header("📊 Analysis Results")
-                display_analysis_results(analysis)
+                st.header(t("analysis_results", lang))
+                display_analysis_results(analysis, lang)
                 
                 # Audio Section
-                st.markdown("""
+                st.markdown(f"""
                 <div class="audio-section">
-                    <h3>🎵 Audio Summary</h3>
-                    <p>Listen to your dental analysis summary below:</p>
+                    <h3>{t("audio_summary", lang)}</h3>
+                    <p>{t("audio_summary_text", lang)}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -595,7 +987,7 @@ def main():
                     
                     with col_dl1:
                         st.download_button(
-                            label="💾 Download Audio",
+                            label=t("download_audio", lang),
                             data=audio_bytes,
                             file_name=f"dental_analysis_audio_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3",
                             mime="audio/mp3"
@@ -603,15 +995,15 @@ def main():
                     
                     with col_dl2:
                         st.download_button(
-                            label="📄 Download Report",
-                            data=create_downloadable_report(analysis),
+                            label=t("download_report", lang),
+                            data=create_downloadable_report(analysis, lang),
                             file_name=f"dental_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                             mime="text/plain"
                         )
                     
                     with col_dl3:
                         st.download_button(
-                            label="📝 Download Script",
+                            label=t("download_script", lang),
                             data=audio_summary,
                             file_name=f"dental_audio_script_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                             mime="text/plain"
@@ -624,21 +1016,21 @@ def main():
                         pass
                         
                 else:
-                    st.warning("🔊 Audio generation failed, but you can still download the text summary:")
-                    st.text_area("Audio Script", audio_summary, height=150)
+                    st.warning(t("audio_failed", lang))
+                    st.text_area(t("audio_script", lang), audio_summary, height=150)
                     
                     col_script1, col_script2 = st.columns(2)
                     with col_script1:
                         st.download_button(
-                            label="📝 Download Script",
+                            label=t("download_script", lang),
                             data=audio_summary,
                             file_name=f"dental_audio_script_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                             mime="text/plain"
                         )
                     with col_script2:
                         st.download_button(
-                            label="📄 Download Report",
-                            data=create_downloadable_report(analysis),
+                            label=t("download_report", lang),
+                            data=create_downloadable_report(analysis, lang),
                             file_name=f"dental_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                             mime="text/plain"
                         )
@@ -648,20 +1040,20 @@ def main():
                 progress_bar.empty()
                 status_text.empty()
                 
-                st.header("❌ Analysis Failed")
+                st.header(t("analysis_failed", lang))
                 st.error(f"Analysis Error: {analysis['error']}")
                 if "raw_response" in analysis:
                     st.text_area("Raw Response", analysis["raw_response"], height=200)
     
     # Educational content
-    st.header("📚 Cavity Stages Guide")
+    st.header(t("cavity_stages_guide", lang))
     
     stages_info = {
-        "Stage 0": ("No Cavity", "Healthy tooth or very early demineralization", "#c6f6d5"),
-        "Stage 1": ("Early Enamel Decay", "White spots or early enamel damage", "#fed7d7"),
-        "Stage 2": ("Dentin Decay", "Cavity has reached the dentin layer", "#fbb6ce"),
-        "Stage 3": ("Pulp Involvement", "Infection has reached the tooth's pulp", "#fc8181"),
-        "Stage 4": ("Abscess/Severe", "Advanced infection, possible abscess", "#e53e3e")
+        "Stage 0": (t("stage_0", lang), t("stage_0_desc", lang), "#c6f6d5"),
+        "Stage 1": (t("stage_1", lang), t("stage_1_desc", lang), "#fed7d7"),
+        "Stage 2": (t("stage_2", lang), t("stage_2_desc", lang), "#fbb6ce"),
+        "Stage 3": (t("stage_3", lang), t("stage_3_desc", lang), "#fc8181"),
+        "Stage 4": (t("stage_4", lang), t("stage_4_desc", lang), "#e53e3e")
     }
     
     cols = st.columns(5)
