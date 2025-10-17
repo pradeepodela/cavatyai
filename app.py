@@ -13,9 +13,11 @@ from dotenv import load_dotenv
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import ssl, certifi
+import ssl
+import certifi
 
-ssl_context = ssl.create_default_context(cafile=certifi.where())
+# Fix SSL context for Edge TTS
+ssl._create_default_https_context = ssl._create_unverified_context
 load_dotenv()
 
 # Language translations dictionary
