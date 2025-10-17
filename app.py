@@ -13,11 +13,9 @@ from dotenv import load_dotenv
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import ssl, certifi, os
+import ssl, certifi
 
-# Fix SSL certificate verification issue in Streamlit Cloud
-os.environ['SSL_CERT_FILE'] = certifi.where()
-ssl._create_default_https_context = ssl._create_default_https_context
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 load_dotenv()
 
 # Language translations dictionary
