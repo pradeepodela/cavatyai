@@ -723,13 +723,26 @@ async def generate_edge_tts_audio(text, voice="en-US-AriaNeural", rate="+0%", pi
     """Generate audio file using Edge TTS"""
     try:
         import edge_tts
-
+        import aiohttp
+        
         # Create a temporary file for the audio
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
             temp_path = temp_file.name
 
-        communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
-        await communicate.save(temp_path)
+        # Create SSL context that doesn't verify certificates
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        # Create connector with custom SSL context
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        
+        # Create communicate object with custom connector
+        async with aiohttp.ClientSession(connector=connector) as session:
+            communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+            # Monkey patch the session
+            communicate._session = session
+            await communicate.save(temp_path)
 
         return temp_path
     except ImportError:
